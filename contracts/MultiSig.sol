@@ -22,7 +22,6 @@ contract MultiSig {
     uint256 public threshold; // immutable state
     mapping(address => bool) isOwner; // immutable state
     address[] public ownersArr; // immutable state
-
     bytes32 DOMAIN_SEPARATOR; // hash for EIP712, computed from contract address
 
     constructor(
@@ -37,6 +36,7 @@ contract MultiSig {
         );
 
         address lastAdd = address(0);
+
         for (uint256 i = 0; i < owners_.length; i++) {
             require(owners_[i] > lastAdd);
             isOwner[owners_[i]] = true;
@@ -87,6 +87,7 @@ contract MultiSig {
         );
 
         address lastAdd = address(0); // cannot have address(0) as an owner
+
         for (uint256 i = 0; i < threshold; i++) {
             address recovered = ecrecover(totalHash, sigV[i], sigR[i], sigS[i]);
             require(recovered > lastAdd && isOwner[recovered]);

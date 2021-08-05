@@ -4,6 +4,8 @@ pragma solidity >=0.7.0 <0.9.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+// Вставить ли в основной контракт?
+
 contract BlackList is Ownable {
     mapping(address => bool) private _isBlacklisted;
 

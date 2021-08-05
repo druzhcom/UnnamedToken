@@ -5,6 +5,7 @@ pragma solidity >=0.7.0 <0.9.0;
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "./AntiWhale.sol";
 
+// После эмиссии % идет на Whitelist, потом(какое-то событие) участники листа могут забрать себе 20%, и так каждый месяц, пока не исчерпается фонд Вайтлиста
 contract WhiteList is AntiWhale, Pausable {
     bool wlPaused;
 

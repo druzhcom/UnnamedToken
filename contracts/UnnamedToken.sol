@@ -24,87 +24,66 @@ import "@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
 contract UnnamedToken is Context, IERC20, WhiteList, BlackList {
     using SafeMath for uint256;
 
-    mapping(address => uint256) private _balances;
+    address _whiteList;
 
+    mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
     mapping(address => uint256) private _rOwned;
     mapping(address => uint256) private _tOwned;
     mapping(address => uint256) private _transactionCheckpoint;
-
-    address[] private _excluded;
-
-    string private _name = "Unnamed";
-    string private _symbol = "UNN";
-    uint8 private _decimals = 18;
-
-    uint256 private _tFeeTotal;
-
-    IUniswapV2Router02 public immutable uniswapV2Router;
-    address public immutable uniswapV2Pair;
-
-    uint256 public _taxFee = 5;
-    uint256 public _liquidityFee = 5;
-    // uint256 public _liquidityFee = 60;
-
-    bool inSwapAndLiquify;
-
-    uint256 private constant MAX = ~uint256(0);
-
-    uint256 constant maxCap = 1000000000 * (10**18);
-    uint256 private _rTotal = (MAX - (MAX % maxCap));
-
-    uint256 public _maxTxAmount = 12500 * 10**6 * 10**9;
-    uint256 private _totalSupply = maxCap;
-
-    address private _previousOwner;
-    uint256 private _lockTime;
-
-    // mapping(address => uint256) private _transactionCheckpoint;
-
     mapping(address => bool) public _isExcludedFromAntiWhale;
     mapping(address => bool) public _isExcludeFromExternalTokenMinAmount;
-
     mapping(address => bool) private _isExcludedFromFee;
     mapping(address => bool) private _isExcluded;
     mapping(address => bool) private _isBlacklisted;
     mapping(address => bool) private _isExcludedFromTransactionlock;
     mapping(address => bool) private _isExcludedFromMaxTxAmount;
 
-    // uint256 private _tFeeTotal;
-
-    uint256 public _burnFee = 0;
-    uint256 private _previousBurnFee = _burnFee;
-
-    uint256 public _reflectionFee = 100;
-    uint256 private _previousReflectionFee = _reflectionFee;
-
-    uint256 public _externalFee = 90;
-    uint256 private _previousExternalFee = _externalFee;
-
-    uint256 private _previousLiquidityFee = _liquidityFee;
-
-    uint256 private _totalLiquidityFee = _externalFee.add(_liquidityFee);
-    uint256 private _previousTLiquidityFee = _totalLiquidityFee;
-
-    uint256 private _transactionLockTime = 0;
-
+    address[] private _excluded;
+    address public immutable uniswapV2Pair;
     address public pancakePair;
+    address payable public _externalAddress =
+        payable(0x50C7f291916e1CAFf2601eE82D398D5841f37793);
+    address payable public _burnAddress =
+        payable(0x000000000000000000000000000000000000dEaD);
 
+    string private _name = "Unnamed";
+    string private _symbol = "UNN";
+    uint8 private _decimals = 18;
+    uint256 private _tFeeTotal;
+    uint256 public _taxFee = 5;
+    uint256 public _liquidityFee = 5; // uint256 public _liquidityFee = 60;
+
+    IUniswapV2Router02 public immutable uniswapV2Router;
+
+    bool inSwapAndLiquify;
     bool public isExternalTokenHoldEnabled;
-    IERC20 public _externalToken; // OR IBEP
-
     bool public swapAndLiquifyEnabled = true;
 
+    uint256 private constant MAX = ~uint256(0);
+    uint256 constant maxCap = 1000000000 * (10**18);
+    uint256 private _rTotal = (MAX - (MAX % maxCap));
+    uint256 public _maxTxAmount = 12500 * 10**6 * 10**9;
+    uint256 private _totalSupply = maxCap;
+    uint256 private _lockTime;
+    // uint256 private _tFeeTotal;
+    uint256 public _burnFee = 0;
+    uint256 private _previousBurnFee = _burnFee;
+    uint256 public _reflectionFee = 100;
+    uint256 private _previousReflectionFee = _reflectionFee;
+    uint256 public _externalFee = 90;
+    uint256 private _previousExternalFee = _externalFee;
+    uint256 private _previousLiquidityFee = _liquidityFee;
+    uint256 private _totalLiquidityFee = _externalFee.add(_liquidityFee);
+    uint256 private _previousTLiquidityFee = _totalLiquidityFee;
+    uint256 private _transactionLockTime = 0;
     uint256 public _externalTokenMinAmount = 50000 * 10**6 * 10**_decimals;
     uint256 public _maxTxAmountBuy = 1000000 * 10**6 * 10**_decimals;
     uint256 public _maxTxAmountSell = 1000000 * 10**6 * 10**_decimals;
     uint256 public _numTokensSellToAndTransfer = 500000 * 10**6 * 10**_decimals;
     uint256 public _maxTokensPerAddress = 20000000 * 10**6 * 10**_decimals;
 
-        address payable public _externalAddress =
-        payable(0x50C7f291916e1CAFf2601eE82D398D5841f37793);
-    address payable public _burnAddress =
-        payable(0x000000000000000000000000000000000000dEaD);
+    IERC20 public _externalToken; // OR IBEP
 
     event MinTokensBeforeSwapUpdated(uint256 minTokensBeforeSwap);
     event SwapAndLiquifyEnabledUpdated(bool enabled);
@@ -120,20 +99,29 @@ contract UnnamedToken is Context, IERC20, WhiteList, BlackList {
         inSwapAndLiquify = false;
     }
 
-    constructor() {
+    // на ВЛ - 15 %
+    constructor(address _wL) {
+        // _balances[msg.sender] = maxCap - (maxCap / 100) * 15;
+        // _balances[_wL] = (maxCap / 100) * 15;
+
         _balances[msg.sender] = maxCap;
+
+        // 1 этап - для попаданяи в вайт лист нуэнго удовлетворить условиям, из вайтлиста выбирается количество адресов. которые будут участвовать в Сейле
+        // 1,5 этап - на фонд ейрдорпа кидается 5%
+        // 2 этап - токен сеейл, по участникам ВайтЛиста?
+        // 3 этап - после хардкапа -  распределение токенов (20% по ВайтЛисту)
+        // 4 этап - на листинге 1% аэрдорпа распределятся из фонда Эйрдропа
+        // На момент распределение токенов нужно отключить дефялционную модель (рапсред 5%)
 
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(
             0x10ED43C718714eb63d5aA57B78B54704E256024E
         );
 
         // Create a pancakeswap pair for this new token
-        pancakePair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(
-            address(this),
-            _uniswapV2Router.WETH()
-        );
+        uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory())
+            .createPair(address(this), _uniswapV2Router.WETH());
 
-        pancakeRouter = _pancakeRouter;
+        uniswapV2Router = _uniswapV2Router;
 
         _isExcludedFromFee[owner()] = true;
         _isExcludedFromFee[address(this)] = true;
@@ -166,6 +154,8 @@ contract UnnamedToken is Context, IERC20, WhiteList, BlackList {
         _isExcluded[address(0)] = true;
         _isExcluded[_burnAddress] = true;
     }
+
+    // TODO: функции распределения Токенов участникам ВЛ согласно проценту их учасития (0,5 - 3 BNB)
 
     function name() public view virtual returns (string memory) {
         return _name;
@@ -568,6 +558,7 @@ contract UnnamedToken is Context, IERC20, WhiteList, BlackList {
         _burn(sender, bFee);
         _takeLiquidity(tLiquidity);
         _reflectFee(rFee, tFee);
+
         emit Transfer(sender, recipient, tTransferAmount);
     }
 
