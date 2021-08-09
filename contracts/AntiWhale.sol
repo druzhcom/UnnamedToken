@@ -10,6 +10,19 @@ contract AntiWhale is Ownable {
     uint256 public limitWhale;
     bool public antiWhaleActivated;
 
+    mapping(address => bool) public _isExcludedFromAntiWhale;
+
+    function excludeFromAntiWhale(
+        address token,
+        address uniswapV2Pair,
+        address uniswapV2Router
+    ) internal {
+        _isExcludedFromAntiWhale[owner()] = true; // владельца токена
+        _isExcludedFromAntiWhale[token] = true; // токена
+        _isExcludedFromAntiWhale[uniswapV2Pair] = true; // пары Токен-ВЕТН
+        _isExcludedFromAntiWhale[uniswapV2Router] = true; // путейщика
+    }
+
     function activateAntiWhale() public onlyOwner {
         require(antiWhaleActivated == false);
         antiWhaleActivated = true;

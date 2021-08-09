@@ -8,7 +8,7 @@ import "./UnnamedToken.sol";
 contract AirDrop is Ownable {
     UnnamedToken public tokenInstance;
 
-    constructor(address _tokenAddress) {
+    constructor(address payable _tokenAddress) {
         tokenInstance = UnnamedToken(_tokenAddress);
     }
 
